@@ -1,4 +1,3 @@
-jax[tpu]
 flax
 tensorflow-cpu
 tensorflow_datasets
