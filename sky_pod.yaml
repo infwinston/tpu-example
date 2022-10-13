@@ -1,0 +1,18 @@
+# sky.yaml
+
+resources:
+  cloud: gcp
+  zone: us-east1-d
+  accelerators: tpu-v3-32
+  accelerator_args:
+    runtime_version: tpu-vm-base
+    tpu_vm: True
+
+workdir: .
+
+setup: |
+  pip install "jax[tpu]" -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+  pip install -r requirements.txt
+
+run: |
+  python train.py
