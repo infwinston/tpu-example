@@ -1,3 +1,4 @@
 flax
 tensorflow-cpu
 tensorflow_datasets
+wandb

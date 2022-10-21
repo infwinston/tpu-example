@@ -2,11 +2,17 @@
 
 resources:
   cloud: gcp
-  zone: us-central1-a
-  accelerators: tpu-v3-8
+  accelerators: tpu-v2-8
   accelerator_args:
     runtime_version: tpu-vm-base
     tpu_vm: True
+
+file_mounts:
+  /ckpts:
+    name: sky-tpu-cifar
+    mode: MOUNT
+
+  ~/.netrc: ~/.netrc
 
 workdir: .
 
@@ -15,4 +21,4 @@ setup: |
   pip install -r requirements.txt
 
 run: |
-  python -u train.py
+  python -u train.py --run_id $SKYPILOT_RUN_ID

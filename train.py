@@ -4,12 +4,15 @@ import argparse
 import jax
 import jax.numpy as jnp
 from flax import jax_utils
+from flax.training import checkpoints
 import tensorflow as tf
 import tensorflow_datasets as tfds
+import wandb
 
 from utils import init_model_state, get_first_device, ProgressMeter
 from model import ResNet
 
+CKPT_DIR = '/ckpts'
 
 def main():
     global model
@@ -23,7 +26,7 @@ def main():
 
     model = ResNet()
     state = init_model_state(init_rng, model, batch, config)
-    state = jax_utils.replicate(state)
+    state = checkpoints.restore_checkpoint(ckpt_dir=CKPT_DIR, target=state)
 
     train(model, state, train_loader)
 
@@ -57,9 +60,11 @@ def train(model, state, train_loader):
     )
 
     p_train_step = jax.pmap(train_step, axis_name='device')
+    start_itr = state.step
+    state = jax_utils.replicate(state)
 
     end = time.time()
-    for itr in range(config.total_steps):
+    for itr in range(start_itr, config.total_steps):
         batch = next(train_loader)
         batch_size = batch['image'].shape[1]
         progress.update(data=time.time() - end)
@@ -74,6 +79,8 @@ def train(model, state, train_loader):
 
         if itr % config.log_interval == 0:
             progress.display(itr)
+            wandb.log(metrics)
+            checkpoints.save_checkpoint(ckpt_dir=CKPT_DIR, target=jax_utils.unreplicate(state), step=itr)
 
 
 def load_dataset(config, train):
@@ -118,13 +125,17 @@ if __name__ == '__main__':
     print(f'JAX total devices: {jax.device_count()}')
     print(f'JAX local devices: {jax.local_device_count()}')
 
-    config = argparse.Namespace(
-        batch_size=128,
-        lr=1e-3,
-        warmup_steps=1000,
-        total_steps=100000,
-        log_interval=100,
-    )
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--run_id', type=str, default='0')
+    parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--lr', type=float, default=1e-3)
+    parser.add_argument('--warmup_steps', type=int, default=1000)
+    parser.add_argument('--total_steps', type=int, default=1000000)
+    parser.add_argument('--log_interval', type=int, default=100)
+    config = parser.parse_args()
+
+    wandb.login()
+    wandb.init(project="tpu_cifar", id='spot-run-'+config.run_id, resume=True)
 
     is_master_process = jax.process_index() == 0
     main()
