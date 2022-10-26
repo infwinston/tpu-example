@@ -2,11 +2,18 @@
 
 resources:
   cloud: gcp
-  zone: us-east1-d
+  zone: europe-west4-a
   accelerators: tpu-v3-32
   accelerator_args:
     runtime_version: tpu-vm-base
     tpu_vm: True
+
+file_mounts:
+  /ckpts:
+    name: # Fill in a unique name for each spot job
+    mode: MOUNT
+
+  ~/.netrc: ~/.netrc
 
 workdir: .
 
@@ -15,4 +22,4 @@ setup: |
   pip install -r requirements.txt
 
 run: |
-  python -u train.py
+  python -u train.py --run_id $SKYPILOT_RUN_ID

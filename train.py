@@ -11,7 +11,6 @@ import wandb
 
 from utils import init_model_state, get_first_device, ProgressMeter
 from model import ResNet
-
 CKPT_DIR = '/ckpts'
 
 def main():
@@ -76,11 +75,11 @@ def train(model, state, train_loader):
         progress.update(n=batch_size, **{k: v for k, v in metrics.items()})
         progress.update(time=time.time() - end)
         end = time.time()
-
         if itr % config.log_interval == 0:
             progress.display(itr)
-            wandb.log(metrics)
-            checkpoints.save_checkpoint(ckpt_dir=CKPT_DIR, target=jax_utils.unreplicate(state), step=itr)
+            if jax.process_index() == 0:
+                wandb.log(metrics)
+                checkpoints.save_checkpoint(ckpt_dir=CKPT_DIR, target=jax_utils.unreplicate(state), step=itr)
 
 
 def load_dataset(config, train):
